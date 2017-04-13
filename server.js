@@ -7,46 +7,57 @@ let users = [];
 // Define the port
 let port = 6969;
 
-// Define guestId
-let guestId = 0;
-
 // Start a server
 const server = net.createServer((socket) => {
-  // Increment the guest ID so that each connection has a different ID
-  guestId++;
-
-  //Identify the user
-  socket.name = "User" + guestId;
-  let userName = socket.name;
 
   // Put the user in the array
   users.push(socket);
 
   // Send welcome message to the user
-  socket.write("welcome "+ userName + "\n");
+  socket.write("welcome Unknown person. \nPlease enter your nickname and start with # \n ");
 
-  // Console log a message to the server
-  process.stdout.write(userName + " has just connected \n");
-
-  // Broadcast to others excluding this socket
-  broadcast(userName, userName + " joined the chat\n");
-
-  // Handle incoming messages from clients
+  // Register the user and handle incoming messages from clients
   socket.on("data",function (data){
 
-    let message = userName + ">" + data;
+    // Will check for user registration
+    if(data.toString().slice(0,1) === "#"){
+      //Check that [ADMIN] or ADMIN is not used as username
+      if(data.toString().slice(1).replace(/(\r\n|\n|\r)/gm,"") === "[admin]" || data.toString().slice(1).replace(/(\r\n|\n|\r)/gm,"") === "admin"){
+        socket.write("ADMIN cannot be included in your nickname \n");
+      }
+      else{
+        socket.name = data.slice(1).toString().replace(/(\r\n|\n|\r)/gm,"");
 
-    // Send the message to all the other clients
-    broadcast(userName, message);
+        let message1 = socket.name + " has just connected \n";
+        let message2 = socket.name + " joined the chat\n";
 
-    // Log it to the server output
-    process.stdout.write(message);
+        // Console log a message to the server
+        process.stdout.write(message1);
+
+        // Broadcast to others excluding this socket
+        broadcast(socket.name, message2);
+      }
+    }
+
+    else if(socket.name === undefined || socket.name === null){
+      socket.write("Please enter a nickname before moving on with chatting\n");
+    }
+
+    else{
+      let message = socket.name + ">" + data;
+
+      // Send the message to all the other clients
+      broadcast(socket.name, message);
+
+      // Log it to the server output
+      process.stdout.write(message);
+    }
   });
 
   // When user leaves
   socket.on("end", function(){
 
-    let message = userName + ">" + "left this chat\n";
+    let message = socket.name + ">" + "left this chat\n";
 
     //Log it to the server output
     process.stdout.write(message);
@@ -55,7 +66,14 @@ const server = net.createServer((socket) => {
     removeSocket(socket);
 
     //notify all clients
-    broadcast(userName, message);
+    broadcast(socket.name, message);
+  });
+
+  // Enable the server to write message
+  process.stdin.on('data',(chunk) =>{
+    users.forEach(function(socket){
+      socket.write("[ADMIN] " + chunk.toString());
+    });
   });
 
 });
@@ -68,7 +86,6 @@ function broadcast(from, message){
     process.stdout.write("Everyone left the chat");
     return;
   }
-
   // If there are users in the chat, then send the messages
   users.forEach(function(socket){
     if(socket.name === from) return;
