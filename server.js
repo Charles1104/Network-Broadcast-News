@@ -58,10 +58,6 @@ const server = net.createServer((socket) => {
     broadcast(userName, message);
   });
 
-  socket.on("error", function(error){
-    console.log("Socket got problems: ", error.message);
-  });
-
 });
 
 // Send a message to all clients except the sender
@@ -85,11 +81,6 @@ function broadcast(from, message){
 function removeSocket(socket){
   users.splice(users.indexOf(socket),1);
 }
-
-// Listening for any problems with the server
-server.on("error", function(error){
-  console.log("There is a problem!", error.message);
-});
 
 // Upon connecting for the first time, will display a message of the server link
 server.listen(port, () => {
